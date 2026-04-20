@@ -1,0 +1,44 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# Vibe Code Assistant - AI Instructions & Prompts
+# Auto-generated AI guidance files - excluded from version control
+.github/instructions/
+.github/prompts/
+how-to-guides/
+.github/copilot-instructions.md
+
+# Note: These files enhance GitHub Copilot with project-specific guidance.
+# They are excluded to keep your repository clean and focused on your code.
+# The extension will recreate them as needed when analyzing code.

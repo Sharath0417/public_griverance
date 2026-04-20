@@ -1,0 +1,191 @@
+PROJECT DOCUMENTATION: Public Grievance App
+===========================================
+
+1. OVERVIEW
+-----------
+This is a full-stack web application designed for a public grievance redressal system. It allows citizens to lodge complaints (grievances), department officials to resolve them, and administrators to oversee the entire process.
+
+2. TECHNOLOGY STACK
+-------------------
+- Frontend:
+    - Language: JavaScript (ES6+)
+    - Framework: React (via Vite)
+    - Styling: CSS3 (Custom styles)
+    - HTTP Client: Axios / Fetch API
+    - Routing: React Router DOM
+- Backend:
+    - Language: Java (JDK 17)
+    - Framework: Spring Boot Is (v3.5.7)
+    - Build Tool: Maven
+    - Security: Spring Security + JWT (JSON Web Tokens)
+    - Database Access: Spring Data JPA (Hibernate)
+- Database:
+    - Primary: PostgreSQL (Production/Dev)
+    - Fallback: H2 Database (In-memory testing)
+
+3. FOLDER STRUCTURE
+-------------------
+/public-grievance-app
+|-- /src/main/java/com/grievance      # Backend Source Code
+|   |-- /config                       # Security & App Config (JWT filters, CORS)
+|   |-- /controller                   # REST API Controllers (Endpoints)
+|   |-- /model                        # JPA Entities (Database Tables)
+|   |-- /repository                   # Data Access Interfaces (SQL queries)
+|   |-- /service                      # Business Logic Layer
+|   |-- PublicGrievanceAppApplication.java # Main Entry Point
+|
+|-- /src/main/resources               # Backend Resources
+|   |-- application.properties        # Config (Port 8084, DB creds)
+|   |-- data.sql                      # Seed data (Default Departments)
+|
+|-- /frontend                         # Frontend Source Code
+|   |-- /src
+|   |   |-- /components               # React Components (Pages & Widgets)
+|   |   |-- /services                 # API Service wrappers (authService, api.js)
+|   |   |-- /styles                   # CSS Files
+|   |   |-- App.jsx                   # Main Routing Component
+|   |   |-- main.jsx                  # React Entry Point
+|   |-- vite.config.js                # Frontend Build & Proxy Config
+|   |-- package.json                  # Frontend Dependencies
+
+4. DATABASE STRUCTURE (Schema)
+------------------------------
+The application uses a Relational Database with the following tables:
+
+A. Table: `users`
+   - userId (PK): Auto-increment ID
+   - email: Unique User Email (Login ID)
+   - fullName: Name of the user
+   - passwordHash: Encrypted password
+   - role: Enum (CITIZEN, OFFICIAL, ADMIN)
+   - dept_id (FK): Links to `departments` (For OFFICIAL role only)
+
+B. Table: `departments`
+   - deptId (PK): Auto-increment ID
+   - deptName: Name (e.g., PWD, BESCOM)
+   - description: Details about the department
+
+C. Table: `grievances`
+   - grievanceId (PK): Auto-increment ID
+   - title: Short title of the issue
+   - description: Detailed explanation
+   - location: Text-based location
+   - type: Complaint category (Road, Water, etc.)
+   - status: Enum (RAISED, IN_PROGRESS, SOLVED, REJECTED)
+   - imageUrl: Filename of the uploaded proof (Citizen)
+   - resolutionImageUrl: Filename of the resolution proof (Official)
+   - rejectionReason: Reason if rejected
+   - user_id (FK): The Citizen who posted it
+   - dept_id (FK): The Department responsible for fixing it
+
+5. API ENDPOINTS & CRUD OPERATIONS
+----------------------------------
+The backend exposes RESTful APIs. CRUD (Create, Read, Update, Delete) flows are as follows:
+
+- Auth
+  - POST /api/auth/register : Create new user (Citizen/Official/Admin)
+  - POST /api/auth/login    : Authenticate & receive JWT Token
+
+- Grievances
+  - POST /api/grievances       : (Create) Citizen posts a new grievance.
+  - GET  /api/grievances       : (Read) Fetch all (filtered by role in frontend).
+  - GET  /api/grievances/{id}  : (Read) Fetch specific details.
+  - PUT  /api/grievances/{id}  : (Update)
+         - Official: Updates status (to SOLVED) & adds resolution proof.
+         - Admin: Assigns Department or Rejects grievance.
+  - DELETE /api/grievances/{id}: (Delete) Remove a grievance.
+
+- Departments
+  - GET /api/departments : List all available departments.
+
+- Attachments
+  - POST /api/attachments/upload : Upload file (images/PDF) -> Returns filename.
+  - GET  /api/attachments/download/{fileName} : Download/View file.
+
+6. DETAILED FILE EXPLANATIONS
+-----------------------------
+
+[BACKEND]
+
+1. src/main/resources/application.properties
+   - Configuration file.
+   - Sets Server Port to 8084.
+   - Configures PostgreSQL connection (URL, Username, Password).
+   - Defines File Upload directory.
+
+2. com.grievance.model.User.java
+   - Entity class mapping to `users` table.
+   - Defines fields like email, password, role.
+   - Includes relationships (@ManyToOne) to Department.
+
+3. com.grievance.model.Grievance.java
+   - Entity class mapping to `grievances` table.
+   - Core data structure: holds title, description, status, image paths.
+   - Links to User (who posted) and Department (assigned).
+
+4. com.grievance.controller.GrievanceController.java
+   - REST Controller.
+   - Handles HTTP requests for Grievances.
+   - `createGrievance`: Links the logged-in user to the new grievance.
+   - `updateGrievance`: Handles status updates and department assignment.
+
+[FRONTEND]
+
+1. vite.config.js
+   - Configures the development server.
+   - Sets up a **Proxy**: Forwards requests starting with `/api` to `http://localhost:8084` (Backend). This avoids CORS issues during development.
+
+2. src/App.jsx
+   - Main Router.
+   - Defines routes: `/login`, `/user-dashboard`, `/admin-dashboard`, `/official-dashboard`.
+   - Implements `ProtectedRoute`: Checks if user is logged in and has the correct Role before allowing access to a page.
+
+3. src/services/api.js & authService.js
+   - API Wrappers.
+   - `authService`: Handles Login/Register fetch calls.
+   - `grievanceService`: specific calls for Grievance CRUD.
+   - Automatically attaches the JWT `Authorization: Bearer <token>` header to requests.
+
+4. src/components/Login.jsx
+   - Authentication Page.
+   - Tabs for Citizen, Official, Admin.
+   - Handles both Login (isLogin=true) and Registration (isLogin=false).
+   - For Officials, it fetches and shows a Department dropdown during registration.
+
+5. src/components/UserDashboard.jsx (CITIZEN View)
+   - Displays "My Grievances".
+   - Form to "File New Grievance":
+     - Uploads file first -> gets URL -> submits grievance data with URL.
+   - Shows status (RAISED, SOLVED, etc.).
+
+6. src/components/AdminDashboard.jsx (ADMIN View)
+   - Two Tabs: "All Grievances" and "Manage Users".
+   - Grievance Tab:
+     - View all complaints.
+     - Assign a Department to a grievance (Dropdown).
+     - Reject complaints with a reason.
+   - Users Tab:
+     - View list of registered users.
+     - Delete users.
+
+7. src/components/OfficialDashboard.jsx (OFFICIAL View)
+   - Shows only grievances assigned to the logged-in Official's department.
+   - Action: "Solve" a grievance.
+     - Requires uploading a "Resolution Proof" image before status can be changed to SOLVED.
+
+7. APPLICATION FLOW (End-to-End)
+--------------------------------
+1. Registration:
+   - A User registers as "Citizen".
+   - An Official registers as "Department Head" selecting "PWD" department.
+2. Grievance Creation:
+   - Citizen logs in -> Fills form (Title: "Pothole", Type: "Road") -> Uploads photo -> Submits.
+   - Backend saves it with status "RAISED".
+3. Triage (Admin):
+   - Admin logs in -> Sees the new "Road" grievance.
+   - Assigns it to "PWD" Department.
+4. Resolution (Official):
+   - PWD Official logs in -> Sees the assigned grievance.
+   - Fixes the pothole -> Uploads "After" photo -> Marks as "SOLVED".
+5. Verification:
+   - Citizen logs in -> Sees status "SOLVED" -> Views the resolution photo.
